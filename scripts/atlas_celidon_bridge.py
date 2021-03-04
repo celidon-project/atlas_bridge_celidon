@@ -20,12 +20,15 @@ def signal_handler(sig, frame):
 signal.signal(signal.SIGINT, signal_handler)
 
 def ros_mqtt_bridge():
-    mqtt_prefix = 'celidon/iloc'
-    ros_topic = '/atlas/loc_drones/'
-    euis = ['cafe060087081425', # helmet 1 
-                 ]
-
     rospy.init_node('ros_mqtt_bridge', anonymous=True)
+
+    if rospy.has_param('/atlas/loc/whitelist'):
+        euis = rospy.get_param('/atlas/loc/whitelist')
+    else:
+        rospy.logerr("Localizer's whitelist not set")
+
+    mqtt_prefix = 'celidon/iloc'
+    ros_topic = '/atlas/loc/'
 
     tracked = []
     ros_subs = []
@@ -62,8 +65,8 @@ def ros_mqtt_bridge():
 
                 mqtt_dict = {
                     obj['eui']: {
-                        'timestamp': int(obj['ts'].to_sec()*1000),
-                        'position': position_mm,
+                        'ts': int(obj['ts'].to_sec()*1000),
+                        'pos': position_mm,
                         'std_deviation': std_dev
                     }
                 }
