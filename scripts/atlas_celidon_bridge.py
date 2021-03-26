@@ -22,10 +22,22 @@ signal.signal(signal.SIGINT, signal_handler)
 def ros_mqtt_bridge():
     rospy.init_node('ros_mqtt_bridge', anonymous=True)
 
-    if rospy.has_param('/atlas/loc/whitelist'):
-        euis = rospy.get_param('/atlas/loc/whitelist')
+    euis = []
+    alias = []
+
+    if rospy.has_param('/atlas/fast'):
+        objects = rospy.get_param('/atlas/fast')
+        keys = objects.keys()
+        for key in keys: 
+            if rospy.has_param('/atlas/fast/' + key + '/enable'):
+                euis.append(key)
+                if rospy.has_param('/atlas/fast/' + key + '/alias'):
+                    a = rospy.get_param('/atlas/fast/' + key + '/alias')
+                    alias.append(a)
+                else:
+                    alias.append('No Alias')
     else:
-        rospy.logerr("Localizer's whitelist not set")
+        rospy.logerr("No EUIs in tags.yaml")
 
     mqtt_prefix = 'celidon/iloc'
     ros_topic = '/atlas/loc/'
@@ -42,6 +54,7 @@ def ros_mqtt_bridge():
         tracked[i]['ts'] = rospy.get_rostime()
         tracked[i]['point'] = data.point
         tracked[i]['eui'] = euis[i]
+        tracked[i]['alias'] = alias[i]
         tracked[i]['xbuf'].append(data.point.x)
         tracked[i]['ybuf'].append(data.point.y)
 
@@ -67,7 +80,8 @@ def ros_mqtt_bridge():
                     obj['eui']: {
                         'ts': int(obj['ts'].to_sec()*1000),
                         'pos': position_mm,
-                        'std_deviation': std_dev
+                        'std_deviation': std_dev,
+                        'alias': obj['alias']
                     }
                 }
 
