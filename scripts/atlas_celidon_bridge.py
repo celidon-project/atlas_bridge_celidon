@@ -29,13 +29,10 @@ def ros_mqtt_bridge():
         objects = rospy.get_param('/atlas/fast')
         keys = objects.keys()
         for key in keys: 
-            if rospy.has_param('/atlas/fast/' + key + '/enable'):
+            if rospy.has_param('/atlas/fast/' + key + '/alias'):
                 euis.append(key)
-                if rospy.has_param('/atlas/fast/' + key + '/alias'):
-                    a = rospy.get_param('/atlas/fast/' + key + '/alias')
-                    alias.append(a)
-                else:
-                    alias.append('No Alias')
+                a = rospy.get_param('/atlas/fast/' + key + '/alias')
+                alias.append(a)
     else:
         rospy.logerr("No EUIs in tags.yaml")
 
