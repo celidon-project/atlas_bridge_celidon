@@ -3,6 +3,7 @@
 import json
 import signal
 import sys
+import math
 
 import paho.mqtt.client as mqtt
 
@@ -64,26 +65,44 @@ def ros_mqtt_bridge():
         for i, obj in enumerate(tracked):
             diff = now - obj['ts']
             if diff.to_sec() < timeout and obj['point'] is not None:
+                broken = False
+                if math.isnan(obj['point'].x) or math.isnan(obj['point'].y) or math.isnan(obj['point'].z):
+                    broken = True
 
-                position_mm = [int(obj['point'].x * 1000),
-                               int(obj['point'].y * 1000),
-                               int(obj['point'].z * 1000)]
-                
-                std_dev = np.mean(np.std(np.asarray(obj['xbuf'])) +
-                                  np.std(np.asarray(obj['ybuf'])))
-                std_dev = int((std_dev) * 1000) + off
+                if not broken:
+                    position_mm = [int(obj['point'].x * 1000),
+                                   int(obj['point'].y * 1000),
+                                   int(obj['point'].z * 1000)]
+                    
+                    std_dev = np.mean(np.std(np.asarray(obj['xbuf'])) +
+                                      np.std(np.asarray(obj['ybuf'])))
+                    std_dev = int((std_dev) * 1000) + off
 
-                mqtt_dict = {
-                    obj['eui']: {
-                        'ts': int(obj['ts'].to_sec()*1000),
-                        'pos': position_mm,
-                        'std_deviation': std_dev,
-                        'alias': obj['alias']
-                    }
-                }
+                    if obj['eui'] == 'cafe060043042148':
+                        mqtt_dict = {
+                            obj['eui']: {
+                                'ts': int(obj['ts'].to_sec()*1000),
+                                'to': 5000,
+                                'text': 'Missing',
+                                'pos': position_mm,
+                                'std_deviation': std_dev,
+                                'alias': obj['alias']
+                            }
+                        }
+                        print('POI', mqtt_dict)
+                        client.publish('celidon/poi', json.dumps(mqtt_dict))
 
-                print(mqtt_dict)
-                client.publish(mqtt_prefix, json.dumps(mqtt_dict))
+                    else:
+                        mqtt_dict = {
+                            obj['eui']: {
+                                'ts': int(obj['ts'].to_sec()*1000),
+                                'pos': position_mm,
+                                'std_deviation': std_dev,
+                                'alias': obj['alias']
+                            }
+                        }
+                        print(mqtt_dict)
+                        client.publish(mqtt_prefix, json.dumps(mqtt_dict))
 
     client = mqtt.Client()
     client.on_connect = on_connect
